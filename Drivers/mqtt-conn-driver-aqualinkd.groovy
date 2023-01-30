@@ -372,15 +372,27 @@ def addHandler(String name, String topic, int qos, String hType) {
   synchronized (state.handlers) {
     def id = UUID.randomUUID().toString()
     log.info(" adding child device of type"+hType+" with name: "+name)
+     switch( hType ){
+            case Switch:
+                addChildDevice("ccruiser", "MQTT Handler Switch", id,
+                  [isComponent: true, name: name])
+
+            break
+            default:
+                addChildDevice("cruiser", "MQTT Handler Listener", id,
+                [isComponent: true, name: name])
+            break
+     }
+     /* Old TODO - remove
     if (hType == "Switch") 
     {
       addChildDevice("ccruiser", "MQTT Handler Switch", id,
                     [isComponent: true, name: name])
     }
     else{
-      addChildDevice("parasaurolophus", "MQTT Handler", id,
+      addChildDevice("cruiser", "MQTT Handler Listener", id,
                     [isComponent: true, name: name])
-    }
+    }*/
       subscribeHandler(topic, qos, id)
       return id
 
