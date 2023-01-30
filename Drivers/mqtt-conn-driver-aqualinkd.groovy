@@ -1,4 +1,4 @@
-// Copyright (C) Casey Cruise 2023
+ // Copyright (C) Casey Cruise 2023
 
 // See LICENSE.txt for licensing terms of this software.
 
@@ -67,21 +67,31 @@
 // 6. Use "Custom Attribute" triggers and actions to access received messages in
 //    RM
 /*
-* Known Issue(s) & Gaps:
-* 1) Add Dynamic lists for aqualink buttons / inputs
-* 2) Add an option to pass options to child devices
-* 3) Add temperature control handler
-* 4) Add other features (only switch is supported)
-* 5) Add timer controls ? 
-* 
-* Version Control:
-* 0.1.0 - Initial version based on mq-connection-driver-aqualinkd
-.groovy
-* 
-* Thank you(s):
-* Kirk Rader for orginal code base and foundation of MQTT Setup
-*
-*/
+ * Known Issue(s) & Gaps:
+ * 1) Add Dynamic lists for aqualink buttons / inputs
+ * 2) Add an option to pass options to child devices
+ * 3) Add temperature control handler
+ * 4) Add other features (only switch is supported)
+ * 5) Add timer controls ? 
+ * 
+ * Version Control:
+ * 0.2.0 - added new device handler type; added driver setup attributes
+ * 0.1.0 - Initial version based on mq-connection-driver-aqualinkd
+ * 
+ * Thank you(s):
+ * Kirk Rader for orginal code base and foundation of MQTT Setup
+ *
+ */
+
+// Returns the driver name
+def DriverName(){
+    return "MQTT Connection 2"
+}
+
+// Returns the driver version
+def DriverVersion(){
+    return "0.2.0"
+}
 
 metadata {
 
@@ -97,6 +107,10 @@ metadata {
     // Include a capability that is integrated with Rule Machine
     capability "Actuator"
 
+    // Define the Current Driver attributes 
+    attribute "Driver Name", "string" // Identifies the driver being used for update purposes
+		attribute "Driver Version", "string" // Handles version for driver
+
     // Send a MQTT message.
     command "publish", [
       [name: "topic", type: "STRING"],
@@ -109,7 +123,8 @@ metadata {
     command "addHandler", [
       [name: "name", type: "STRING"],
       [name: "topic", type: "STRING"],
-      [name: "qos", type: "INTEGER"]
+      [name: "qos", type: "INTEGER"],
+      [name: "type", type: "ENUM", options: [ "Listener", "Switch" ]]
     ]
 
     // Remove the specified child MQTT Handler device.
@@ -229,6 +244,10 @@ def updated() {
 // Disconnect from the MQTT broker, if necessary, then connect.
 def initialize() {
 
+  //Set Version and Driver
+  ProcessEvent( "Driver Name", "${ DriverName() }" )
+  ProcessEvent( "Driver Version", "${ DriverVersion() }" )
+  //Initialize Brokers
   synchronized (state.handlers) {
 
     disconnect()
@@ -302,8 +321,9 @@ def disconnect() {
       }
 
       try {
-
+        //log.info("MQTT attempting disconnect from "+settings.broker)
         interfaces.mqtt.disconnect()
+
 
       } catch (e) {
 
@@ -341,22 +361,28 @@ def publish(String topic, String payload, int qos = 2,
 
 // RM-compatible overload for publish(String, String, int, boolean).
 def publish(String topic, String payload, int qos, String retained) {
-
+  log.info("topic: "+topic+" published called with payload: "+payload)
   publish(topic, payload, qos, retained.toBoolean())
 
 }
 
 // Add a MQTT Handler child device subscribed to the specified topic.
-def addHandler(String name, String topic, int qos) {
+def addHandler(String name, String topic, int qos, String hType) {
 
   synchronized (state.handlers) {
-
     def id = UUID.randomUUID().toString()
-
-    addChildDevice("parasaurolophus", "MQTT Handler", id,
-                   [isComponent: true, name: name])
-    subscribeHandler(topic, qos, id)
-    return id
+    log.info(" adding child device of type"+hType+" with name: "+name)
+    if (hType == "Switch") 
+    {
+      addChildDevice("ccruiser", "MQTT Handler Switch", id,
+                    [isComponent: true, name: name])
+    }
+    else{
+      addChildDevice("parasaurolophus", "MQTT Handler", id,
+                    [isComponent: true, name: name])
+    }
+      subscribeHandler(topic, qos, id)
+      return id
 
   }
 }
@@ -425,6 +451,7 @@ def parse(String event) {
 
         } else {
 
+          log.debug("sending update from topic: "+message.topic+" for payload: "+message.payload)
           handler.sendEvent(name: "payload", value: message.payload)
 
         }
@@ -492,7 +519,7 @@ def unsubscribeHandler(String id) {
     }
 
     if (topic != null) {
-
+      log.debug("unsubscribing events from topic: "+topic+"")
       state.handlers.remove(topic)
       unsubscribe(topic)
 
@@ -512,6 +539,7 @@ def subscribeHandler(String topic, int qos, String id) {
 
       subscribe(topic, qos)
       state.handlers.putAt(topic, [id: id, qos: qos])
+      log.debug("subscribing events for child device: "+handler+" for topic "+topic)
       handler.sendEvent(name: "topic", value: topic)
 
     } else {

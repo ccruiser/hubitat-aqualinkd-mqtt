@@ -31,6 +31,8 @@ metadata {
 
     // Payload of incoming message.
     attribute "payload", "STRING"
+    attribute "topic", "STRING"
+
 
   }
       preferences {
@@ -57,7 +59,13 @@ def updated() {
 // Standard Initialize life-cycle command.
 def initialize() {
 
-  // nothing to do here
+  // set button state based on payload variable 
+  if (payload) {
+    push(1)
+  }
+  else {
+    push(0)
+  }
 
 }
 
