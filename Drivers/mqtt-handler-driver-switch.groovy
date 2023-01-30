@@ -72,10 +72,10 @@ def off() {
 def push(int pstate) {
     //set values for events
     def valState = "off"
-    def topic2Set = "SwitchOffTopic"
+    def topic2Set = "${ SwitchOffTopic }"
     if (pstate) {
        valState = "on"
-       topic2Set = "SwitchOnTopic"
+       topic2Set = "${ SwitchOnTopic }"
     }
     // Send Event and Run Command to Publish
     sendEvent(name: "switch", value: valState, isStateChange: true)
