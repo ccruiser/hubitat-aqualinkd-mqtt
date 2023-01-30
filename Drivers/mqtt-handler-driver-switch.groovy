@@ -34,8 +34,8 @@ metadata {
 
   }
       preferences {
-                input(name: "Switch-On-Topic", type: "string", title:"Switch 'On' Topic", description: "Enter the topic used when 'on' is invoked", required: true)
-                input(name: "Switch-Off-Topic", type: "string", title:"Switch 'Off' Topic", description: "Enter the topic used when 'off' is invoked", required: true)
+                input(name: "SwitchOnTopic", type: "string", title:"Switch 'On' Topic", description: "Enter the topic used when 'on' is invoked", required: true)
+                input(name: "SwitchOffTopic", type: "string", title:"Switch 'Off' Topic", description: "Enter the topic used when 'off' is invoked", required: true)
   }
 
 }
@@ -72,21 +72,19 @@ def off() {
 def push(int pstate) {
     //set values for events
     def valState = "off"
+    def topic2Set = "SwitchOffTopic"
     if (pstate) {
        valState = "on"
-       sendEvent(name: "switch", value: valState, isStateChange: true)
-       runCmd("${ Switch-On-Topic }", pstate)
-
-
+       topic2Set = "SwitchOnTopic"
     }
-    else{
-        sendEvent(name: "switch", value: valState, isStateChange: true)
-        runCmd("${ Switch-Off-Topic }", pstate)
-    }
+    // Send Event and Run Command to Publish
+    sendEvent(name: "switch", value: valState, isStateChange: true)
+    runCmd(topic2Set , pstate)
+
 }
 
 //Take action on push event
 def runCmd(String varTopic, int valToSet) {
-        log.info( "Publishing to topic: "+varTopic+" value: "+valToSet )
-       parent.publish(varTopic, valToSet, 1, "false")  
+    log.info( "Publishing to topic: "+varTopic+" value: "+valToSet )
+    parent.publish(varTopic, valToSet, 1, "false")  
 }
