@@ -34,8 +34,8 @@ metadata {
 
   }
       preferences {
-                input(name: "Switch-On-Topic", type: "string", title:"Switch 'On' Topic", description: "Enter the topic used when 'on' is invoked", required: false)
-                input(name: "Switch-Off-Topic", type: "string", title:"Switch 'Off' Topic", description: "Enter the topic used when 'off' is invoked", required: false)
+                input(name: "Switch-On-Topic", type: "string", title:"Switch 'On' Topic", description: "Enter the topic used when 'on' is invoked", required: true)
+                input(name: "Switch-Off-Topic", type: "string", title:"Switch 'Off' Topic", description: "Enter the topic used when 'off' is invoked", required: true)
   }
 
 }
@@ -69,19 +69,19 @@ def off() {
 	push(0)
 }
 
-def push(int state) {
+def push(int pstate) {
     //set values for events
     def valState = "off"
-    if (state) {
+    if (pstate) {
        valState = "on"
        sendEvent(name: "switch", value: valState, isStateChange: true)
-       runCmd(Switch-On-Topic, state)
+       runCmd("${ Switch-On-Topic }", pstate)
 
 
     }
     else{
         sendEvent(name: "switch", value: valState, isStateChange: true)
-        runCmd(Switch-Off-Topic, state)
+        runCmd("${ Switch-Off-Topic }", pstate)
     }
 }
 
