@@ -81,7 +81,7 @@
 * Thank you(s):
 * Kirk Rader for orginal code base and foundation of MQTT Setup
 *
-* /
+*/
 
 metadata {
 
