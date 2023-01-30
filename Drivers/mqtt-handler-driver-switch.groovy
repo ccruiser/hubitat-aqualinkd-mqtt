@@ -86,5 +86,5 @@ def push(int pstate) {
 //Take action on push event
 def runCmd(String varTopic, int valToSet) {
     log.info( "Publishing to topic: "+varTopic+" value: "+valToSet )
-    parent.publish(varTopic, valToSet, 1, "false")  
+    parent.publish("${ varTopic }", "${ valToSet }", 1, false)  
 }
