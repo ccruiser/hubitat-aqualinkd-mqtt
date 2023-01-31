@@ -60,8 +60,22 @@ metadata {
 
   }
       preferences {
-                input(name: "SwitchOnTopic", type: "string", title:"Switch 'On' Topic", description: "Enter the topic used when 'on' is invoked", required: true)
-                input(name: "SwitchOffTopic", type: "string", title:"Switch 'Off' Topic", description: "Enter the topic used when 'off' is invoked", required: true)
+                input(
+                  name: "SwitchOnTopic", 
+                  type: "string", 
+                  title:"Switch 'On' Topic", 
+                  description: "Enter the topic used when 'on' is invoked", 
+                  defaultValue: "${topic}",
+                  required: true
+                )
+                input(
+                  name: "SwitchOffTopic", 
+                  type: "string", 
+                  title:"Switch 'Off' Topic", 
+                  description: "Enter the topic used when 'off' is invoked", 
+                  defaultValue: "${topic}",
+                  required: true
+                )
   }
 
 }
@@ -84,7 +98,7 @@ def updated() {
 def initialize() {
 
   // Default Handler Type to Switch
-  sendEvent(name: "Handler Type", value: ${ HandlerType() }, isStateChange: true)
+  sendEvent(name: "Handler Type", value: "${ HandlerType() }", isStateChange: true)
 
   // set button state based on payload variable 
   if (payload) {
@@ -94,15 +108,15 @@ def initialize() {
     push(0)
   }
 }
-
+//switch is on
 def on() {
 	push(1)
 }
-
+//switch is off
 def off() {
 	push(0)
 }
-
+//Triggers for Switch 
 def push(int pstate) {
     //set values for events
     def valState = "off"
@@ -113,12 +127,11 @@ def push(int pstate) {
     }
     // Send Event and Run Command to Publish
     sendEvent(name: "switch", value: valState, isStateChange: true)
-    runCmd(topic2Set , pstate)
+    runParentCmd(topic2Set , pstate)
 
 }
-
 //Take action on push event
-def runCmd(String varTopic, int valToSet) {
+def runParentCmd(String varTopic, int valToSet) {
     log.info( "Publishing to topic: "+varTopic+" value: "+valToSet )
     parent.publish("${ varTopic }", "${ valToSet }", 1, false)  
 }

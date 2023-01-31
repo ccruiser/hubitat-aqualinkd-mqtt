@@ -68,16 +68,16 @@
 //    RM
 /*
  * Known Issue(s) & Gaps:
- * 1) Add Dynamic lists for aqualink buttons / inputs
- * 2) Add an option to pass options to child devices
- * 3) Add temperature control handler
- * 4) Add other features (only switch is supported)
- * 5) Add timer controls ? 
+ * 1) Missing Dynamic lists for aqualink buttons / inputs
+ * 2) Missing temperature control handler
+ * 3) Needed other features (only switch is supported)
+ * 4) Missing timer controls ? 
  * 
  * Version Control:
  * 0.2.0 - added new device handler type; added driver setup 
  *       - added last published attrribute data
  *       - added preferences show / hide options
+ *       - added switch logic to sync payload 
  * 0.1.0 - Initial version based on mq-connection-driver-aqualinkd
  * 
  * Thank you(s):
@@ -273,13 +273,15 @@ def updated() {
 def initialize() {
 
   //Set Version and Driver
-  ProcessEvent( "Driver Name", "${ DriverName() }" )
-  ProcessEvent( "Driver Version", "${ DriverVersion() }" )
+  sendEvent(name: "Driver Name", value: "${ DriverName() }")
+  sendEvent(name: "Driver Version", value: "${ DriverVersion() }")
+
   //Initialize Brokers
   synchronized (state.handlers) {
 
     disconnect()
     connect()
+    log.info("initalization complete")
 
   }
 }
@@ -496,6 +498,18 @@ def parse(String event) {
             switch( defType ){
                   case "Switch":
                       log.debug(" setting 'switch' value per payload: "+message.payload)
+                      switch (message.payload){
+                        case "1":
+                           handler.sendEvent(name: "switch", value: "on")
+                        break
+                        case "0":
+                           handler.sendEvent(name: "switch", value: "off")
+                        break
+                        default:
+                          log.warn("Unknown handler type: "+defType+" with payload "+message.payload )
+                        break
+
+                      }
                   break
                   case "Listener":
                       log.debug(" setting 'listener' value per payload: "+message.payload)

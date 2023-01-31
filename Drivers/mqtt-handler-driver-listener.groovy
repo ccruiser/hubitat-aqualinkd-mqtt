@@ -78,6 +78,6 @@ def updated() {
 def initialize() {
 
  // Default Handler Type to Listener
- sendEvent(name: "Handler Type", value: ${ HandlerType() }, isStateChange: true)
+ sendEvent(name: "Handler Type", value: "${ HandlerType() }", isStateChange: true)
 
 }
