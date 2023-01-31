@@ -22,17 +22,28 @@
  * 
  * Version Control:
  * 0.2.0 - added topic attribute
+ *       - added handler type and last published attributes
+ *       - added default Handler Type attribute 
  * 0.1.0 - Initial version based on mq-handler-driver
  * 
  * Thank you(s):
  * Kirk Rader for orginal code base and foundation of MQTT Setup
  */
 
+// Returns the driver name
+def DriverName(){
+    return "MQTT Handler Listener"
+}
+
+//Handler Static items
+def HandlerType() {
+    return "Listener"
+}
 
 metadata {
 
   definition (name: "MQTT Handler Listener",
-              namespace: "ccruise",
+              namespace: "ccruiser",
               author: "Casey Cruise",
               importUrl: "https://raw.githubusercontent.com/ccruiser/hubitat-aqualinkd-mqtt/main/Drivers/mqtt-handler-driver-listener.groovy") {
 
@@ -42,6 +53,8 @@ metadata {
     // Payload of incoming message.
     attribute "payload", "STRING"
     attribute "topic", "STRING"
+    attribute "Last Published", "STRING"
+    attribute "Handler Type", "STRING"
 
 
   }
@@ -64,6 +77,7 @@ def updated() {
 // Standard Initialize life-cycle command.
 def initialize() {
 
-  // nothing to do here
+ // Default Handler Type to Listener
+ sendEvent(name: "Handler Type", value: ${ HandlerType() }, isStateChange: true)
 
 }

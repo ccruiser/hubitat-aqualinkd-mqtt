@@ -75,7 +75,9 @@
  * 5) Add timer controls ? 
  * 
  * Version Control:
- * 0.2.0 - added new device handler type; added driver setup attributes
+ * 0.2.0 - added new device handler type; added driver setup 
+ *       - added last published attrribute data
+ *       - added preferences show / hide options
  * 0.1.0 - Initial version based on mq-connection-driver-aqualinkd
  * 
  * Thank you(s):
@@ -124,7 +126,7 @@ metadata {
       [name: "name", type: "STRING"],
       [name: "topic", type: "STRING"],
       [name: "qos", type: "INTEGER"],
-      [name: "type", type: "ENUM", options: [ "Listener", "Switch" ]]
+      [name: "hType", type: "STRING", options: [ "Listener", "Switch" ], defaultValue: "Listener"]
     ]
 
     // Remove the specified child MQTT Handler device.
@@ -145,68 +147,92 @@ metadata {
 
     // State of the connection to the MQTT broker ("connected" or
     // "disconnected").
-    attribute "connection", "STRING"
+    attribute "Connection Status", "STRING"
+    attribute "Connection Last Event", "STRING"
+
 
   }
 
   preferences {
+    if( ShowAllPreferences || ShowAllPreferences == null ){ // Show the preferences options
 
-    input(
-      name: "broker",
-      type: "text",
-      title: "Broker URL",
-      description: "use tcp:// or ssl:// prefix",
-      required: true,
-      displayDuringSetup: true
-    )
+      input(
+        name: "broker",
+        type: "text",
+        title: "Broker URL",
+        description: "use tcp:// or ssl:// prefix",
+        required: true,
+        displayDuringSetup: true
+      )
 
-    input(
-      name: "clientId",
-      type: "text",
-      title: "Client Id",
-      description: "MQTT client id",
-      required: true,
-      displayDuringSetup: true,
-      defaultValue: UUID.randomUUID().toString()
-    )
+      input(
+        name: "clientId",
+        type: "text",
+        title: "Client Id",
+        description: "MQTT client id",
+        required: true,
+        displayDuringSetup: true,
+        defaultValue: UUID.randomUUID().toString()
+      )
 
-    input(
-      name: "username",
-      type: "text",
-      title: "Username",
-      description: "(optional)",
-      required: false,
-      displayDuringSetup: true
-    )
+      input(
+        name: "username",
+        type: "text",
+        title: "Username",
+        description: "(optional)",
+        required: false,
+        displayDuringSetup: true
+      )
 
-    input(
-      name: "password",
-      type: "password",
-      title: "Password",
-      description: "(optional)",
-      required: false,
-      displayDuringSetup: true
-    )
+      input(
+        name: "password",
+        type: "password",
+        title: "Password",
+        description: "(optional)",
+        required: false,
+        displayDuringSetup: true
+      )
 
-    input(
-      name: "lwtTopic",
-      type: "text",
-      title: "LWT Topic",
-      description: "LWT message topic when disconnecting from broker",
-      required: true,
-      displayDuringSetup: true,
-      defaultValue: "hubitat/lwt"
-    )
+      input(
+        name: "lwtTopic",
+        type: "text",
+        title: "LWT Topic",
+        description: "LWT message topic when disconnecting from broker",
+        required: true,
+        displayDuringSetup: true,
+        defaultValue: "hubitat/lwt"
+      )
 
-    input(
-      name: "lwtMessage",
-      type: "text",
-      title: "LWT Message",
-      description: "LWT message body when disconnecting from broker",
-      required: true,
-      displayDuringSetup: true,
-      defaultValue: "disconnected"
-    )
+      input(
+        name: "lwtMessage",
+        type: "text",
+        title: "LWT Message",
+        description: "LWT message body when disconnecting from broker",
+        required: true,
+        displayDuringSetup: true,
+        defaultValue: "disconnected"
+      )
+      input( 
+        type: "bool", 
+        name: "ShowAllPreferences", 
+        title: "<b>Show All Preferences?</b>", 
+        defaultValue: true 
+      )
+      /*
+      input( type: "bool", 
+        name: "AdvancedCommands", 
+        title: "<b>Enable Advanced Commands?</b>", 
+        description: "Allows Hander delete, create, update functions.", 
+        defaultValue: false )
+      */
+
+
+    } else {
+      input( type: "bool", 
+      name: "ShowAllPreferences", 
+      title: "<b>Show All Preferences?</b>", 
+      defaultValue: true )
+    }
 
   }
 }
@@ -221,7 +247,9 @@ def installed() {
 
   synchronized (state.handlers) {
 
-    sendEvent(name: "connection", value: "disconnected")
+    log.info("initializing connection for installed device")
+    sendEvent(name: "Connection Status", value: "disconnected")
+    sendEvent(name: "Connection Last Event", value: new Date() )
 
     if (settings.broker?.trim()) {
 
@@ -290,11 +318,15 @@ def connect() {
 
         }
 
-        sendEvent(name: "connection", value: "connected")
+        sendEvent(name: "Connection Status", value: "connected")
+        sendEvent(name: "Connection Last Event", value: new Date() )
+
 
       } catch (e) {
 
         log.error "error connecting to MQTT broker: ${e}"
+        sendEvent(name: "Connection Status", value: "error")
+        sendEvent(name: "Connection Last Event", value: new Date() )
         state.handlers.wait(5000)
 
       }
@@ -321,7 +353,7 @@ def disconnect() {
       }
 
       try {
-        //log.info("MQTT attempting disconnect from "+settings.broker)
+        log.debug("MQTT attempting disconnect from "+settings.broker)
         interfaces.mqtt.disconnect()
 
 
@@ -334,7 +366,9 @@ def disconnect() {
       state.connected = false
       state.handlers.notifyAll()
       log.info "disconnected from " + settings.broker
-      sendEvent(name: "connection", value: "disconnected")
+      sendEvent(name: "Connection Status", value: "disconnected")
+      sendEvent(name: "Connection Last Event", value: new Date() )
+
 
     }
   }
@@ -373,26 +407,16 @@ def addHandler(String name, String topic, int qos, String hType) {
     def id = UUID.randomUUID().toString()
     log.info(" adding child device of type"+hType+" with name: "+name)
      switch( hType ){
-            case Switch:
+            case "Switch":
                 addChildDevice("ccruiser", "MQTT Handler Switch", id,
                   [isComponent: true, name: name])
 
             break
             default:
-                addChildDevice("cruiser", "MQTT Handler Listener", id,
+                addChildDevice("ccruiser", "MQTT Handler Listener", id,
                 [isComponent: true, name: name])
             break
      }
-     /* Old TODO - remove
-    if (hType == "Switch") 
-    {
-      addChildDevice("ccruiser", "MQTT Handler Switch", id,
-                    [isComponent: true, name: name])
-    }
-    else{
-      addChildDevice("cruiser", "MQTT Handler Listener", id,
-                    [isComponent: true, name: name])
-    }*/
       subscribeHandler(topic, qos, id)
       return id
 
@@ -465,6 +489,21 @@ def parse(String event) {
 
           log.debug("sending update from topic: "+message.topic+" for payload: "+message.payload)
           handler.sendEvent(name: "payload", value: message.payload)
+          handler.sendEvent(name: "Last Published", value: new Date())
+          // Check for Handler Types
+          def defType = handler.currentValue("Handler Type")
+          log.debug(" validating handler payload for handler action for type: "+defType)
+            switch( defType ){
+                  case "Switch":
+                      log.debug(" setting 'switch' value per payload: "+message.payload)
+                  break
+                  case "Listener":
+                      log.debug(" setting 'listener' value per payload: "+message.payload)
+                  break
+                  default:
+                    log.warn("Unknown handler type: "+defType )
+                  break
+          }
 
         }
       }
@@ -553,6 +592,11 @@ def subscribeHandler(String topic, int qos, String id) {
       state.handlers.putAt(topic, [id: id, qos: qos])
       log.debug("subscribing events for child device: "+handler+" for topic "+topic)
       handler.sendEvent(name: "topic", value: topic)
+      /*
+      if (hType != "" ) {
+          handler.sendEvent(name: "Handler Type", value: hType)
+      } 
+      */
 
     } else {
 

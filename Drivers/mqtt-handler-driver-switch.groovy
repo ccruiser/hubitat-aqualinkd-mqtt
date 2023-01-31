@@ -18,6 +18,29 @@
 // "message" custom attribute of MQTT Handler devices in RM triggers and
 // actions.
 
+/*
+ * Known Issue(s) & Gaps: 
+ * 
+ * Version Control:
+ * 0.2.0 - added topic attribute
+ *       - added handler type and last published attributes
+ *       - added default Handler Type attribute 
+ * 0.1.0 - Initial version based on mq-handler-driver
+ * 
+ * Thank you(s):
+ * Kirk Rader for orginal code base and foundation of MQTT Setup
+ */
+
+// Returns the driver name
+def DriverName(){
+    return "MQTT Handler Switch"
+}
+
+//Handler Static items
+def HandlerType() {
+    return "Switch"
+}
+
 metadata {
 
   definition (name: "MQTT Handler Switch",
@@ -32,7 +55,8 @@ metadata {
     // Payload of incoming message.
     attribute "payload", "STRING"
     attribute "topic", "STRING"
-
+    attribute "Last Published", "STRING"
+    attribute "Handler Type", "STRING"
 
   }
       preferences {
@@ -59,6 +83,9 @@ def updated() {
 // Standard Initialize life-cycle command.
 def initialize() {
 
+  // Default Handler Type to Switch
+  sendEvent(name: "Handler Type", value: ${ HandlerType() }, isStateChange: true)
+
   // set button state based on payload variable 
   if (payload) {
     push(1)
@@ -66,7 +93,6 @@ def initialize() {
   else {
     push(0)
   }
-
 }
 
 def on() {
