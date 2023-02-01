@@ -62,6 +62,15 @@ metadata {
   }
   preferences {
      if( ShowAllPreferences || ShowAllPreferences == null ){ // Show the preferences options
+        section("Device Options:")  {
+            input(
+                name: "tempOffset",
+                type: "number",
+                title: "Temperature Offset Value",
+                description: "Adjusted Temperature to Set",
+                defaultValue: 0
+            )
+        }
         section("Logging Options:")  {
             input(
                     name: "debugLogEnable",
@@ -171,7 +180,7 @@ private parseTemperature(Float pTemp, checkin) {
 			translatable:true
 			], checkin)
 	}*/
-  
+
 }
 
 void updateState(Float pTemp, String label) {
@@ -184,7 +193,9 @@ void updateState(Float pTemp, String label) {
     }
     def tempOut = Float.toString(rTemp)
 
-    infoLog("update state function called for name: temperature value: "+tempOut+" from value: ")
+    infoLog("update state function called for name: temperature value: "+
+            tempOut+" from value: "+device.currentValue("temperature"+
+            "with units: "+configuredUnit))
     //sendEvent(name: "temperature", value: tempOut, unit: configuredUnit)
     	generateEvent([
 			name: 'temperature',
