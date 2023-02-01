@@ -194,8 +194,8 @@ void updateState(Float pTemp, String label) {
     def tempOut = Float.toString(rTemp)
 
     infoLog("update state function called for name: temperature value: "+
-            tempOut+" from value: "+device.currentValue("temperature"+
-            "with units: "+configuredUnit))
+            tempOut+" from value: "+${device.currentValue("temperature")}+
+            "with units: "+configuredUnit)
     //sendEvent(name: "temperature", value: tempOut, unit: configuredUnit)
     	generateEvent([
 			name: 'temperature',
