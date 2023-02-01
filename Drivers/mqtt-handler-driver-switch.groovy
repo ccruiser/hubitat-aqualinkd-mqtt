@@ -25,6 +25,7 @@
  * 0.2.0 - added topic attribute
  *       - added handler type and last published attributes
  *       - added default Handler Type attribute 
+ *       - added default set topic and "override" if needed
  * 0.1.0 - Initial version based on mq-handler-driver
  * 
  * Thank you(s):
@@ -60,22 +61,34 @@ metadata {
 
   }
       preferences {
-                input(
-                  name: "SwitchOnTopic", 
-                  type: "string", 
-                  title:"Switch 'On' Topic", 
-                  description: "Enter the topic used when 'on' is invoked", 
-                  defaultValue: "${topic}",
-                  required: true
-                )
-                input(
-                  name: "SwitchOffTopic", 
-                  type: "string", 
-                  title:"Switch 'Off' Topic", 
-                  description: "Enter the topic used when 'off' is invoked", 
-                  defaultValue: "${topic}",
-                  required: true
-                )
+                if( OverrideTopicDefaults ){ // Show the override options
+                  input(
+                    name: "SwitchOnTopic", 
+                    type: "string", 
+                    title:"Switch 'On' Topic", 
+                    description: "Enter the topic used when 'on' is invoked", 
+                    defaultValue: "${ topic }",
+                    required: true
+                  )
+                  input(
+                    name: "SwitchOffTopic", 
+                    type: "string", 
+                    title:"Switch 'Off' Topic", 
+                    description: "Enter the topic used when 'off' is invoked", 
+                    defaultValue: "${ topic }",
+                    required: true
+                  )
+                  input( type: "bool", 
+                  name: "OverrideTopicDefaults", 
+                  title: "<b>Override topics used for state changes?</b>", 
+                  defaultValue: false )
+                } else {
+                  input( type: "bool", 
+                  name: "OverrideTopicDefaults", 
+                  title: "<b>Override topics used for state changes?</b>", 
+                  defaultValue: false )
+                }
+
   }
 
 }
@@ -118,20 +131,31 @@ def off() {
 }
 //Triggers for Switch 
 def push(int pstate) {
-    //set values for events
-    def valState = "off"
-    def topic2Set = "${ SwitchOffTopic }"
-    if (pstate) {
-       valState = "on"
-       topic2Set = "${ SwitchOnTopic }"
-    }
-    // Send Event and Run Command to Publish
-    sendEvent(name: "switch", value: valState, isStateChange: true)
-    runParentCmd(topic2Set , pstate)
-
+    def topic2Set = device.currentValue("topic")
+    topic2Set = topic2Set+"/set"
+    switch( pstate ){
+            case "1":
+                if (OverrideTopicDefaults) {
+                  topic2Set = "${ SwitchOnTopic }"
+                }
+                runCmdUpdates(topic2Set , pstate, "on")
+            break
+            case "0":
+                if (OverrideTopicDefaults) {
+                  topic2Set = "${ SwitchOffTopic }"
+                }
+                runCmdUpdates(topic2Set , pstate, "off")
+            break
+            default:
+                log.error("unknown state value: "+pstate+"no actions taken.")
+            break
+     }
 }
 //Take action on push event
-def runParentCmd(String varTopic, int valToSet) {
+def runCmdUpdates(String varTopic, int valToSet, String varState) {
+    //turn on or off switch
+    sendEvent(name: "switch", value: varState, isStateChange: true)
+    //publish to topic 
     log.info( "Publishing to topic: "+varTopic+" value: "+valToSet )
     parent.publish("${ varTopic }", "${ valToSet }", 1, false)  
 }
